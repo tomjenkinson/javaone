@@ -21,9 +21,6 @@
  */
 package io.narayana.rts.lra.demo.tripcontroller;
 
-import io.narayana.lra.annotation.LRA;
-import io.narayana.lra.client.LRAClient;
-import io.narayana.lra.client.LRAClientAPI;
 import io.narayana.rts.lra.demo.model.Booking;
 import io.narayana.rts.lra.demo.model.BookingStore;
 
@@ -32,7 +29,6 @@ import javax.annotation.PreDestroy;
 import javax.enterprise.context.RequestScoped;
 import javax.inject.Inject;
 import javax.ws.rs.DELETE;
-import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
@@ -58,19 +54,15 @@ public class TripMicroservice {
     private Client hotelClient, flightClient;
     private WebTarget hotelTarget, flightTarget;
 
-    @Inject
-    private LRAClientAPI lraClientAPI;
-
     // Business logic
 
     @POST
     @Produces(MediaType.APPLICATION_JSON)
-    @LRA(delayClose = true, join = false)
-    public Booking reserve(@HeaderParam(LRAClient.LRA_HTTP_HEADER) String bookingId) throws UnsupportedEncodingException {
+    public Booking reserve() throws UnsupportedEncodingException {
         Booking theGrand = post(false, "TheGrand");
         Booking firstClass = post(true, "firstClass");
         Booking economy = post(true, "economy");
-        Booking trip = new Booking(bookingId, theGrand, firstClass, economy);
+        Booking trip = new Booking("REPLACEME", theGrand, firstClass, economy);
         bookingStore.add(trip);
 
         Booking updatedBooking = put(firstClass);
@@ -82,9 +74,7 @@ public class TripMicroservice {
     @Path("/{bookingId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Booking confirm(@PathParam("bookingId") String bookingId) throws IOException, URISyntaxException {
-        String responseData = lraClientAPI.closeLRA(new URL(bookingId));
         Booking booking = bookingStore.update(bookingId, Booking.BookingStatus.CONFIRMED);
-        booking.merge(responseData);
         return booking;
     }
 
@@ -92,9 +82,7 @@ public class TripMicroservice {
     @Path("/{bookingId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Booking cancel(@PathParam("bookingId") String bookingId) throws IOException, URISyntaxException {
-        String responseData = lraClientAPI.cancelLRA(new URL(bookingId));
         Booking booking = bookingStore.update(bookingId, Booking.BookingStatus.CANCELLED);
-        booking.merge(responseData);
         return booking;
     }
 
